@@ -1,0 +1,89 @@
+<!doctype html>
+<html>
+<head>
+    <meta charset="utf-8">
+</head>
+<style>
+    html,body {
+        height: 100%;
+        padding-top: 28px;
+    }
+
+    #cy {
+        width: 100%;
+        height: 100%;
+    }
+
+    .padding-top-10 {
+        padding-top: 10px;
+    }
+
+    .hidden {
+        display: none;
+    }
+
+    .margin-right-10 {
+        margin-right: 10px;
+    }
+
+    .margin-top-10 {
+        margin-top: 10px;
+    }
+
+    #cyNotification {
+        position:absolute;
+        left:50%;
+        top:50%;
+
+        transform: translate(-50%,-50%);
+    }
+
+    @import url(https://fonts.googleapis.com/css?family=Droid+Sans);
+    .loader {
+        position: fixed;
+        left: 0px;
+        top: 0px;
+        width: 100%;
+        height: 100%;
+        z-index: 9999;
+        background: url('/images/loading-icon.jpg') 50% 50% no-repeat rgb(249,249,249);
+        background-size: 200px 200px;
+    }
+
+    .node-label {
+        background-color: transparent !important;
+        margin: 0 auto;
+        max-width: 9.25rem;
+    }
+
+    .node-label-header {
+        padding: 0rem 0.25rem !important;
+        font-weight: bold;
+    }
+
+    .node-label-body, .node-label-body .list-group-item {
+        background-color: transparent !important;
+        padding: 0rem 0.25rem !important;
+    }
+
+    /* Inset, by Dan Eden */
+    hr.style-six {
+        border: 0;
+        height: 0;
+        border-top: 1px solid rgba(0, 0, 0, 0.1);
+        border-bottom: 1px solid rgba(255, 255, 255, 0.3);
+    }
+
+</style>
+<body>
+
+<div id="loader" class="loader"></div>
+<div id="graph"></div>
+<div id="data-settings"></div>
+
+<script src="/generated/app-bundle.js"/>
+<script type="module" src="/js/index.js"></script>
+<script src="/js/config/rest.config.js" type="text/javascript"></script>
+
+</body>
+</html>
