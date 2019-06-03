@@ -92,8 +92,31 @@ export default {
         csvService.setCellFormatterCallback(self.cellFormatterCallback);
         csvService.setCellEditorCallback(self.cellEditorCallback);
         self.addLayer(null, false);
+        self.initializeExportProjectListener();
     },
     methods: {
+        initializeExportProjectListener: function() {
+            var self = this;
+
+            if (document.addEventListener) {
+                document.addEventListener('exportProjectEvent', function(e) {
+                    self.exportProject(e);
+                }, false);
+            } else {
+                document.attachEvent('exportProjectEvent', function(e) {
+                    self.exportProject(e);
+                });
+            }
+        },
+        exportProject: function() {
+            var self = this;
+            var a = window.document.createElement("a");
+            a.href = 'data:application/json;charset=utf-8,%EF%BB%BF' + encodeURIComponent(JSON.stringify(self.systemLayers));
+            a.download = "projectStructure.json";
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+        },
         loadFile: function (id) {
             var self = this;
             var target = document.getElementById('csvFile_' + id);
@@ -151,10 +174,10 @@ export default {
                 autoResize: true
             });
         },
-        drawTableIfEmpty: function(id) {
+        drawTableIfEmpty: function (id) {
             var self = this;
 
-            if(!self.systemLayers[id].table) {
+            if (!self.systemLayers[id].table) {
                 var row = {};
                 row.cells = [""];
                 self.drawTable([row], id);
@@ -173,8 +196,8 @@ export default {
             var row = {};
             row.id = index;
 
-            $.each(cells, function (index, value) {
-                row[index] = value;
+            $.each(cells, function (idx, value) {
+                row[idx] = value;
             });
 
             return row;
@@ -227,7 +250,7 @@ export default {
 
             var table = self.systemLayers[id].table;
             var row = {};
-            row.id = table.getRows().length;
+            row.id = self.getRowId(id, table.getRows().length);
 
             $.each(table.getColumns(), function (index, column) {
                 var field = column.getField();
@@ -246,48 +269,98 @@ export default {
             self.drawTableIfEmpty(id);
 
             var table = self.systemLayers[id].table;
-            var columnIndex = table.getColumns().length.toString();
-            table.addColumn(csvService.createTableColumn(columnIndex));
+            var columnName = self.getColumnName(id, table.getColumns().length);
+            table.addColumn(csvService.createTableColumn(columnName));
 
             $.each(table.getRows(), function (index, row) {
                 var updatedRow = {};
 
                 if (index == 0) {
-                    updatedRow[columnIndex] = $('#attributeName_' + id).val();
+                    updatedRow[columnName] = $('#attributeName_' + id).val();
                 } else {
-                    updatedRow[columnIndex] = "0";
+                    updatedRow[columnName] = "0";
                 }
 
                 table.updateRow(index, updatedRow);
             });
         },
-        setUploadedFileName : function(event) {
+        removeTableRow(contextId) { // Object
+            var self = this;
+            var rowId = parseInt($('#tableRowToRemove_' + contextId).find('option:selected').val());
+            var layer = self.systemLayers[contextId];
+            layer.table.getRow(rowId).delete();
+            Vue.set(self.systemLayers, layer.id, layer);
+        },
+        removeTableColumn(contextId) { // Attribute
+            var self = this;
+            var fieldName = parseInt($('#tableColumnToRemove_' + contextId).find('option:selected').val());
+            var layer = self.systemLayers[contextId];
+            layer.table.getColumn(fieldName).delete();
+            Vue.set(self.systemLayers, layer.id, layer);
+        },
+        getRowId(key, tableLength) {
+            var self = this;
+            var layer = self.systemLayers[key];
+            var nextId = layer.nextRowId;
+
+            if (!nextId) {
+                layer.nextRowId = tableLength + 1;
+                Vue.set(self.systemLayers, layer.id, layer);
+                return tableLength;
+            }
+
+            layer.nextRowId++;
+            Vue.set(self.systemLayers, layer.id, layer);
+            return nextId;
+        },
+        getColumnName(key, tableLength) {
+            var self = this;
+            var layer = self.systemLayers[key];
+            var nextId = layer.nextColumnId;
+
+            if (!nextId) {
+                layer.nextColumnId = tableLength + 1;
+                Vue.set(self.systemLayers, layer.id, layer);
+                return tableLength.toString();
+            }
+
+            layer.nextColumnId++;
+            Vue.set(self.systemLayers, layer.id, layer);
+            return nextId.toString();
+        },
+        setUploadedFileName: function (event) {
             var fileName = event.target.files[0] ? event.target.files[0].name : "";
             $(event.target).closest('div').find('.custom-file-label').html(fileName);
         },
-        addLayer: function(event, addedByUser) {
+        addLayer: function (event, addedByUser) {
             var self = this;
             var id = !self.isEmptySystemLayers ? Object.keys(self.systemLayers).length : 0;
             var layerName = 'Context ' + (id + 1);
-            var layer = {id: id, table: undefined, name: layerName, upperLayerName: 'Upper-layer', lowerLayerName: 'Sub-layer'};
+            var layer = {
+                id: id,
+                table: undefined,
+                name: layerName,
+                upperLayerName: 'Upper-layer',
+                lowerLayerName: 'Sub-layer'
+            };
             Vue.set(self.systemLayers, layer.id, layer);
 
             if (addedByUser) {
                 self.scrollToElement($(event.target));
             }
         },
-        removeLayer: function(id) {
+        removeLayer: function (id) {
             Vue.delete(this.systemLayers, id);
         },
-        scrollToElement: function(element) {
+        scrollToElement: function (element) {
             window.scrollToElement(element);
         },
-        editName: function(id, selector) {
+        editName: function (id, selector) {
             $('#' + selector + 'Header_' + id).hide();
             $('#' + selector + 'EditButton_' + id).hide();
             $('#' + selector + 'InputContainer_' + id).show();
         },
-        saveName: function(id, selector, nameKey) {
+        saveName: function (id, selector, nameKey) {
             var self = this;
             var layer = self.systemLayers[id];
             var inputContainer = $('#' + selector + 'InputContainer_' + id);
@@ -297,7 +370,7 @@ export default {
             $('#' + selector + 'EditButton_' + id).show();
             inputContainer.hide();
         },
-        saveSubsystemName: function(id, subsystem, selector) {
+        saveSubsystemName: function (id, subsystem, selector) {
             var self = this;
             var layer = self.systemLayers[id];
             var subsystemTypeSelector = subsystem.type + 'Subsystems';
@@ -307,7 +380,7 @@ export default {
             Vue.set(self.systemLayers, id, layer);
             $('#' + selector).hide();
         },
-        attributeNameInputChanged: function(id) {
+        attributeNameInputChanged: function (id) {
             var self = this;
             var selector = '#attributeName_' + id;
             var input = $(selector);
@@ -315,7 +388,7 @@ export default {
             layer.addAttributeDisabled = input.val() ? false : true;
             Vue.set(self.systemLayers, id, layer);
         },
-        objectNameInputChanged: function(id) {
+        objectNameInputChanged: function (id) {
             var self = this;
             var selector = '#objectName_' + id;
             var input = $(selector);
@@ -323,7 +396,7 @@ export default {
             layer.addObjectDisabled = input.val() ? false : true;
             Vue.set(self.systemLayers, id, layer);
         },
-        selectSubLayer: function(event, id) {
+        selectSubLayer: function (event, id) {
             var self = this;
             var layer = self.systemLayers[id];
             var subContextId = event.target.value;
@@ -347,7 +420,7 @@ export default {
                 }
             }
         },
-        checkIfRowsAreParentLayerColumns: function(parentLayerId, layerToCheck) {
+        checkIfRowsAreParentLayerColumns: function (parentLayerId, layerToCheck) {
             var self = this;
             var parentLayer = self.systemLayers[parentLayerId];
 
@@ -358,7 +431,7 @@ export default {
             var parentLayerAttributes = parentLayer.rows[0].cells.slice(1);
             var subLayerObjects = [];
 
-            $.each(layerToCheck.rows, function( index, row ) {
+            $.each(layerToCheck.rows, function (index, row) {
                 if (index > 0) {
                     var cellValue = row.cells[0];
                     if (cellValue) {
@@ -388,7 +461,7 @@ export default {
 
             return [];
         },
-        addSubsystem: function(id, layerType, parentSubsystem) {
+        addSubsystem: function (id, layerType, parentSubsystem) {
             var self = this;
             var subsystem = {};
             var layer = self.systemLayers[id];
@@ -407,7 +480,7 @@ export default {
             }
 
             subsystem.type = layerType;
-            subsystem.id = !self.isEmptyObject(subsystems) ? Object.keys(subsystems).length : 0;
+            subsystem.id = self.getSubsystemId(id);
             subsystem.hierarchyLevel = 1;
 
             if (isChild) {
@@ -429,7 +502,22 @@ export default {
                 return prefix + ' of ' + parentName
             }
         },
-        removeSubsystem: function(id, subsystem) {
+        getSubsystemId(contextId) {
+            var self = this;
+            var layer = self.systemLayers[contextId];
+            var nextId = layer.nextSubsystemId;
+
+            if (!nextId) {
+                layer.nextSubsystemId = 1;
+                Vue.set(self.systemLayers, layer.id, layer);
+                return 0;
+            }
+
+            layer.nextSubsystemId++;
+            Vue.set(self.systemLayers, layer.id, layer);
+            return nextId;
+        },
+        removeSubsystem: function (id, subsystem) {
             var self = this;
             var layer = self.systemLayers[id];
             var subsystemsSelector = subsystem.type + 'Subsystems';
@@ -446,7 +534,7 @@ export default {
             Vue.delete(subsystems, subsystem.id);
 
             function deleteRelatedChildSubsystems() {
-                $.each(self.getChildren(id, subsystem), function( index, childSubsystem ) {
+                $.each(self.getChildren(id, subsystem), function (index, childSubsystem) {
                     self.removeSubsystem(id, childSubsystem);
                 });
             }
@@ -454,7 +542,7 @@ export default {
             function getUpdatedHierarchies() {
                 var updatedHierarchies = subsystemsHierarchy;
 
-                $.each(subsystemsHierarchy, function( subsystemId, parentId ) {
+                $.each(subsystemsHierarchy, function (subsystemId, parentId) {
                     if (subsystemId.toString() === subsystem.id.toString())
                         updatedHierarchies = self.removeElementFromArray(updatedHierarchies, subsystem.id);
                 });
@@ -462,7 +550,7 @@ export default {
                 return updatedHierarchies;
             }
         },
-        addSubsystemElement: function(id, subsystem, selector) {
+        addSubsystemElement: function (id, subsystem, selector) {
             if ($('#' + selector).is(":hidden")) {
                 $('#' + selector).show();
                 return;
@@ -488,7 +576,7 @@ export default {
             $('#' + selector).hide();
 
         },
-        deleteSubsystemElement: function(contextId, subsystem, element) {
+        deleteSubsystemElement: function (contextId, subsystem, element) {
             var self = this;
             var layer = self.systemLayers[contextId];
             var subsystemsSelector = subsystem.type + 'Subsystems';
@@ -500,7 +588,7 @@ export default {
             layer[subsystemsSelector] = subsystems;
 
             // Remove element from child systems recursively
-            $.each(self.getChildren(contextId, subsystem), function( index, childSubsystem ) {
+            $.each(self.getChildren(contextId, subsystem), function (index, childSubsystem) {
                 if ($.inArray(element, childSubsystem.elements) > -1) {
                     self.deleteSubsystemElement(contextId, childSubsystem, element);
                 }
@@ -508,10 +596,10 @@ export default {
 
             Vue.set(self.systemLayers, contextId, layer);
         },
-        isEmptyObject: function(object) {
+        isEmptyObject: function (object) {
             return !object || $.isEmptyObject(object);
         },
-        subsystemCandidates: function(id, subsystem) {
+        subsystemCandidates: function (id, subsystem) {
             if (typeof subsystem === 'undefined') {
                 return [];
             }
@@ -521,6 +609,7 @@ export default {
 
             var candidates = [];
 
+            // If has parent system
             if (self.hasParentSubsystem(id, subsystem)) {
                 var parentSubsystemId = self.getParentSubsystemId(id, subsystem);
                 var parentSubsystem = layer[subsystem.type + 'Subsystems'][parentSubsystemId];
@@ -531,7 +620,7 @@ export default {
             } else if (subsystem.type === 'upper') {
                 var lowerLayerElements = [];
 
-                $.each(layer.rows, function( index, row ) {
+                $.each(layer.rows, function (index, row) {
                     if (index > 0) {
                         var cellValue = row.cells[0];
                         if (cellValue) {
@@ -551,7 +640,7 @@ export default {
                 return candidates.filter(candidate => {
                     var isCandidate = true;
 
-                    $.each(subsystemsToCheck, function( index, system ) {
+                    $.each(subsystemsToCheck, function (index, system) {
                         if ($.inArray(candidate, system.elements) > -1) {
                             isCandidate = false;
                         }
@@ -561,7 +650,7 @@ export default {
                 });
             }
         },
-        displayGraphOfSubsystems: function(id, hierarchyLevel) {
+        displayGraphOfSubsystems: function (id, hierarchyLevel) {
             var self = this;
             var rows = [{cells: [""]}];
             var layer = self.systemLayers[id];
@@ -569,14 +658,14 @@ export default {
             var subsystemsOfLowerLayer = layer['lowerSubsystems'];
 
             // Set attributes
-            $.each(subsystemsOfLowerLayer, function( index, subsystem ) {
+            $.each(subsystemsOfLowerLayer, function (index, subsystem) {
                 if (subsystem.hierarchyLevel === hierarchyLevel) {
                     rows[0].cells.push(subsystem.id);
                 }
             });
 
             // Set objects
-            $.each(subsystemsOfUpperLayer, function( index, subsystem ) {
+            $.each(subsystemsOfUpperLayer, function (index, subsystem) {
                 if (subsystem.hierarchyLevel === hierarchyLevel) {
                     var newIndex = parseInt(index) + 1;
                     rows[newIndex] = {};
@@ -585,16 +674,16 @@ export default {
             });
 
             // Set relations
-            $.each(rows, function( i, row ) {
+            $.each(rows, function (i, row) {
                 // Ignore header, it contains attributes, not relations
                 if (i !== 0) {
                     // For each element of the upper subsystem
                     var upperSubsystemId = row.cells[0];
-                    $.each(subsystemsOfUpperLayer[upperSubsystemId].elements, function( elUpperIdx, elUpper ) {
+                    $.each(subsystemsOfUpperLayer[upperSubsystemId].elements, function (elUpperIdx, elUpper) {
                         // Check each lower subsystem elements
-                        $.each(rows[0].cells, function( j, lowerSubsystemId ) {
+                        $.each(rows[0].cells, function (j, lowerSubsystemId) {
                             if (j !== 0) {
-                                $.each(subsystemsOfLowerLayer[lowerSubsystemId].elements, function( elLowerIdx, elLower ) {
+                                $.each(subsystemsOfLowerLayer[lowerSubsystemId].elements, function (elLowerIdx, elLower) {
                                     rows[i].cells[j] = areRelated(layer.rows, elUpper, elLower) ? '1' : '0';
                                     if (rows[i].cells[j] === 1) {
                                         return false; // Break the loop if at least one relation is found
@@ -608,13 +697,13 @@ export default {
             });
 
             // Set subsystem names
-            $.each(rows[0].cells, function( i, cell ) {
+            $.each(rows[0].cells, function (i, cell) {
                 if (i !== 0) {
                     rows[0].cells[i] = subsystemsOfLowerLayer[cell].name;
                 }
             });
 
-            $.each(rows, function( i, row ) {
+            $.each(rows, function (i, row) {
                 if (i !== 0) {
                     rows[i].cells[0] = subsystemsOfUpperLayer[row.cells[0]].name;
                 }
@@ -631,9 +720,9 @@ export default {
                 var relationsInCells = [];
                 var areRelated = false;
 
-                $.each(rows, function(i, row ) {
+                $.each(rows, function (i, row) {
                     if ((i !== 0) && (row.cells[0] === upperElement)) {
-                        $.each(row.cells, function(j, cell ) {
+                        $.each(row.cells, function (j, cell) {
                             if (j !== 0 && cell && cell === '1') {
                                 relationsInCells.push(j);
                             }
@@ -641,7 +730,7 @@ export default {
                     }
                 });
 
-                $.each(rows[0].cells, function(i, cell ) {
+                $.each(rows[0].cells, function (i, cell) {
                     if ((cell === lowerElement) && ($.inArray(i, relationsInCells) > -1)) {
                         areRelated = true;
                         return;
@@ -651,7 +740,7 @@ export default {
                 return areRelated;
             }
         },
-        drawGraphWithAbstractionLayer: function(contextId) {
+        drawGraphWithAbstractionLayer: function (contextId) {
             var self = this;
             var hierarchyLayer = parseInt($('#abstractionLayerOfContext_' + contextId).find('option:selected').val());
 
@@ -662,11 +751,11 @@ export default {
                 window.scrollToTop();
             }
         },
-        superiorSubsystems: function(contextId, subsystems) {
+        superiorSubsystems: function (contextId, subsystems) {
             var self = this;
             var result = {};
 
-            $.each(subsystems, function(i, subsystem ) {
+            $.each(subsystems, function (i, subsystem) {
                 if (!self.hasParentSubsystem(contextId, subsystem)) {
                     result[subsystem.id] = subsystem;
                 }
@@ -674,13 +763,13 @@ export default {
 
             return result;
         },
-        getChildren: function(contextId, subsystem) {
+        getChildren: function (contextId, subsystem) {
             var self = this;
             var result = [];
             var subsystems = self.systemLayers[contextId][subsystem.type + 'Subsystems'];
             var subsystemsHierarchy = self.systemLayers[contextId][subsystem.type + 'SubsystemsHierarchy'];
 
-            $.each(subsystemsHierarchy, function(subsystemId, parentId) {
+            $.each(subsystemsHierarchy, function (subsystemId, parentId) {
                 if (parentId.toString() === subsystem.id.toString()) {
                     result.push(subsystems[subsystemId]);
                 }
@@ -688,20 +777,20 @@ export default {
 
             return result;
         },
-        hasParentSubsystem: function(contextId, subsystem) {
+        hasParentSubsystem: function (contextId, subsystem) {
             return typeof this.getParentSubsystemId(contextId, subsystem) !== 'undefined';
         },
-        getParentSubsystemId: function(contextId, subsystem) {
+        getParentSubsystemId: function (contextId, subsystem) {
             var self = this;
             var hierarchy = self.systemLayers[contextId][subsystem.type + 'SubsystemsHierarchy'];
             return hierarchy ? hierarchy[subsystem.id] : hierarchy;
         },
         removeElementFromArray: function removeElementFromArray(array, elementToRemove) {
-            return $.grep(array, function(value) {
+            return $.grep(array, function (value) {
                 return value != elementToRemove;
             });
         },
-        getGreatestHierarchyLevel: function(contextId) {
+        getGreatestHierarchyLevel: function (contextId) {
             var self = this;
             var greatestLevel = 0;
             var upperSubsystems = self.systemLayers[contextId]['upperSubsystems'];
@@ -712,23 +801,38 @@ export default {
             return greatestLevel;
 
             function getGreatestLevel(upperSubsystems) {
-                $.each(upperSubsystems, function(idx, subsystem) {
+                $.each(upperSubsystems, function (idx, subsystem) {
                     if (subsystem.hierarchyLevel > greatestLevel) {
                         greatestLevel = subsystem.hierarchyLevel;
                     }
                 });
             }
+        },
+        getTableRows: function (contextId) {
+            var self = this;
+            var rows = self.systemLayers[contextId].table.getRows();
+            return rows.slice(1); // Removes first row
+        },
+        getTableColumns: function(contextId) {
+            var self = this;
+            var columns = self.systemLayers[contextId].table.getColumns();
+            return columns.slice(1);
+        },
+        getAttributeName: function (contextId, field) {
+            var self = this;
+            var attributeNamesRow = self.systemLayers[contextId].table.getRows()[0];
+            return attributeNamesRow.getCell(field).getValue();
         }
     },
     computed: {
         isEmptySystemLayers: function () {
             return this.isEmptyObject(this.systemLayers);
         },
-        systemLayersHierarchy: function() {
+        systemLayersHierarchy: function () {
             var self = this;
             var layerHierarchies = [];
 
-            $.each(self.systemLayers, function(index, layer) {
+            $.each(self.systemLayers, function (index, layer) {
                 if ((typeof layer.subContextId !== 'undefined') && (typeof layer.superContextId === 'undefined')) {
                     var hierarchy = [];
                     hierarchy.push(layer);
@@ -736,7 +840,7 @@ export default {
                 }
             });
 
-            $.each(layerHierarchies, function(index, hierarchy) {
+            $.each(layerHierarchies, function (index, hierarchy) {
                 var upperLayer = hierarchy[0];
                 var hasNextLayer = true;
 
@@ -754,7 +858,7 @@ export default {
 
             return layerHierarchies;
         },
-        systemStandaloneLayers: function() {
+        systemStandaloneLayers: function () {
             var self = this;
             return self.systemLayers.filter(layer => {
                 return (typeof layer.subContextId === 'undefined') && (typeof layer.superContextId === 'undefined');

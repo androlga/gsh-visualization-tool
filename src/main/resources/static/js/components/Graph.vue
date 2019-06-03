@@ -7,6 +7,8 @@
                     <a class="nav-link" href="#data-settings">Data settings</a>
                     <a class="nav-link" href="#graph" @click="scrollToTop">Graph <span v-if="graphName"> - <b>{{ graphName }}</b></span></a>
                     <a class="nav-link" href="#system-overview">System overview</a>
+                    <a class="nav-link" href="#"><small class="text-muted" @click="exportProject">[Export project]</small></a>
+                    <a class="nav-link" href="#"><small class="text-muted">[Import project]</small></a>
                 </nav>
             </div>
         </div>
@@ -114,7 +116,10 @@
                         self.initializeGraph(e);
                     });
                 }
-
+            },
+            exportProject: function() {
+                var cytoscapeEvent = new CustomEvent('exportProjectEvent', {});
+                document.dispatchEvent(cytoscapeEvent);
             }
         }
     }

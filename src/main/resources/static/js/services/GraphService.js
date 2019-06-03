@@ -59,11 +59,14 @@ export default class GraphService {
             var cardBody = '';
 
             if (data.attributeLabel) {
-                cardHeader = '<div class="card-header node-label-header"' + data.attributeLabel + '</div>';
+                cardHeader = '<div class="card-header node-label-header">' + data.attributeLabel + '</div>';
             }
 
             if (data.objectLabel) {
-                cardBody = '<div class="card-body node-label-body">' + data.objectLabel + '</div>';
+                cardBody = '<div class="card-body node-label-body">'
+                    + '<ul class="list-group list-group-flush">'
+                    + '<li class="list-group-item">' + data.objectLabel + '</li>'
+                    + '</ul></div>';
             }
 
             return '<div class="card node-label">'

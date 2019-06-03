@@ -138,6 +138,44 @@
                             <div class="col">
                                 <form class="form-inline">
                                     <div class="form-group">
+                                        <div class="form-group">
+                                            <div class="input-group">
+                                                <div class="input-group-prepend">
+                                                    <span class="input-group-text">Remove attribute</span>
+                                                </div>
+                                                <select v-bind:id="'tableColumnToRemove_' + key" class="form-control">
+                                                    <option v-for="column in getTableColumns(key)" :value="column.getField()">
+                                                        {{ getAttributeName(key, column.getField()) }}
+                                                    </option>
+                                                </select>
+                                                <div class="input-group-append">
+                                                    <button type="button" class="btn btn-outline-danger margin-right-10" @click="removeTableColumn(key)">Remove</button>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div class="input-group">
+                                            <div class="input-group-prepend">
+                                                <span class="input-group-text">Remove object</span>
+                                            </div>
+                                            <select v-bind:id="'tableRowToRemove_' + key" class="form-control">
+                                                <option v-for="row in getTableRows(key)" :value="row.getIndex()">
+                                                    {{ row.getCell(0).getValue() }}
+                                                </option>
+                                            </select>
+                                            <div class="input-group-append">
+                                                <button type="button" class="btn btn-outline-danger margin-right-10" @click="removeTableRow(key)">Remove</button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+
+                        <div v-if="value.table" class="row padding-top-10">
+                            <div class="col">
+                                <form class="form-inline">
+                                    <div class="form-group">
                                         <div class="input-group">
                                             <div class="input-group-prepend">
                                                 <span class="input-group-text">Abstraction level</span>
