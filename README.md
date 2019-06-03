@@ -1,7 +1,7 @@
-#Tool for Visualizing Galois Sub-hierarchies for Multi-layered Systems at Various Abstraction Levels
+# Tool for Visualizing Galois Sub-hierarchies for Multi-layered Systems at Various Abstraction Levels
 This tool is an outcome of the master's thesis (TalTech, 2019).
 
-##Build
+## Build
 **Build front-end**
 
     npm run build
@@ -19,12 +19,12 @@ The application will start on the embedded server at
 
     http://localhost:8080
     
-##Use
+## Use
 To use the application go to application page at (by default):
 
     http://localhost:8080
     
-###Context
+### Context
 To **create** the context press "Add context" button.
 
 You can add as many context as you wish.
@@ -37,16 +37,16 @@ To **delete** the context press "Delete" button under the context name.
 
 To **rename** the context press "Edit name" link near the context name.
 
-###Sub-hierarchies
+### Sub-hierarchies
 TODO
 
-###Graph
+### Graph
 TODO
 
-###Import/Export
+### Import/Export
 TODO
 
-##Licence
+## Licence
 **The MIT License**
 
 Copyright 2019
